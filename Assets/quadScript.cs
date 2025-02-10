@@ -17,6 +17,9 @@ public class quadScript : MonoBehaviour
     int _numSlices;
     int _minIntensity;
     int _maxIntensity;
+    float _radius;
+    private float _threshold;
+    int _step;
 
     Texture2D _texture;
 
@@ -24,6 +27,7 @@ public class quadScript : MonoBehaviour
     private Button _button;
     private Toggle _toggle;
     private Slider _slider1;
+    private Slider _slider2;
     //int _iso;
 
 
@@ -34,8 +38,10 @@ public class quadScript : MonoBehaviour
         _button = uiDocument.rootVisualElement.Q("button1") as Button;
         _toggle = uiDocument.rootVisualElement.Q("toggle") as Toggle;
         _slider1 = uiDocument.rootVisualElement.Q("slider1") as Slider;
+        _slider2 = uiDocument.rootVisualElement.Q("slider2") as Slider;
         _button.RegisterCallback<ClickEvent>(button1Pushed);
         _slider1.RegisterValueChangedCallback(slicePosSliderChange);
+        
 
         Slice.initDicom();
 
@@ -45,8 +51,11 @@ public class quadScript : MonoBehaviour
                 Application.dataPath +
                 @"\..\dicomdata\"; // Application.dataPath is in the assets folder, but these files are "managed", so we go one level up
 
+        _step = 2;
+        _radius = 300;
+        _threshold = 0.5f;
         _slices = processSlices(dicomfilepath); // loads slices from the folder above
-        setTexture(_slices[0], 200, 0.50f); // shows the first slice
+        setTexture(_slices[0]); // shows the first slice
         //createCircle(20);
 
         /***
@@ -101,9 +110,8 @@ public class quadScript : MonoBehaviour
         return slices;
     }
 
-    void setTexture(Slice slice, float radius, float threshold)
+    void setTexture(Slice slice)
     {
-        int step = 5;
         int xdim = slice.sliceInfo.Rows;
         int ydim = slice.sliceInfo.Columns;
 
@@ -122,7 +130,7 @@ public class quadScript : MonoBehaviour
             {
                 float distance = Mathf.Sqrt(Mathf.Pow((x - (xdim / 2)), 2) + Mathf.Pow((y - (ydim / 2)), 2));
 
-                float t = Mathf.Clamp01(distance / radius);
+                float t = Mathf.Clamp01(distance / _radius);
 
                 texture.SetPixel(x, y, new UnityEngine.Color(t, t, t));
             }
@@ -136,10 +144,10 @@ public class quadScript : MonoBehaviour
 
         _texture = texture;
 
-        MarchingSquares(step, threshold);
+        MarchingSquares();
     }
 
-    void MarchingSquares(int step, float threshold)
+    void MarchingSquares()
     {
         // Hopp med 10 for eksempel
         // Mål de fire verdiene mot hverandre i en binær streng.
@@ -158,27 +166,27 @@ public class quadScript : MonoBehaviour
         Debug.Log(_texture.height);
 
 
-        for (int y = 0; y < _texture.height; y = y + step)
+        for (int y = 0; y < _texture.height; y = y + _step)
         {
-            for (int x = 0; x < _texture.height; x = x + step)
+            for (int x = 0; x < _texture.height; x = x + _step)
             {
                 float topLeft = _texture.GetPixel(x, y).grayscale;
-                float topRight = _texture.GetPixel(x + step, y).grayscale;
-                float bottomLeft = _texture.GetPixel(x, y + step).grayscale;
-                float bottomRight = _texture.GetPixel(x + step, y + step).grayscale;
+                float topRight = _texture.GetPixel(x + _step, y).grayscale;
+                float bottomLeft = _texture.GetPixel(x, y + _step).grayscale;
+                float bottomRight = _texture.GetPixel(x + _step, y + _step).grayscale;
 
 
-                int caseValue = (topLeft < threshold ? 8 : 0) |
-                                (topRight < threshold ? 4 : 0) |
-                                (bottomRight < threshold ? 2 : 0) |
-                                (bottomLeft < threshold ? 1 : 0);
+                int caseValue = (topLeft < _threshold ? 8 : 0) |
+                                (topRight < _threshold ? 4 : 0) |
+                                (bottomRight < _threshold ? 2 : 0) |
+                                (bottomLeft < _threshold ? 1 : 0);
 
 
                 // Define cell corner positions
                 Vector3 p1 = OversettKoordinat(x, y);
-                Vector3 p2 = OversettKoordinat(x + step, y);
-                Vector3 p3 = OversettKoordinat(x + step, y + step);
-                Vector3 p4 = OversettKoordinat(x, y + step);
+                Vector3 p2 = OversettKoordinat(x + _step, y);
+                Vector3 p3 = OversettKoordinat(x + _step, y + _step);
+                Vector3 p4 = OversettKoordinat(x, y + _step);
 
                 Vector3 midTop = (p1 + p2) / 2;
                 Vector3 midRight = (p2 + p3) / 2;
@@ -281,12 +289,17 @@ public class quadScript : MonoBehaviour
     public void slicePosSliderChange(ChangeEvent<float> evt)
     {
         print("slicePosSliderChange:" + evt.newValue);
-        setTexture(_slices[0],evt.newValue*2,0.50f);
+        
+        _threshold = evt.newValue / 100;
+        setTexture(_slices[0]);
     }
 
     public void sliceIsoSliderChange(float val)
     {
         print("sliceIsoSliderChange:" + val);
+
+        _threshold = val;
+        setTexture(_slices[0]);
     }
 
     public void button1Pushed(ClickEvent evt)
