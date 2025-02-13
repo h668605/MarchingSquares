@@ -19,6 +19,7 @@ public class quadScript : MonoBehaviour
     int _maxIntensity;
     float _radius;
     private float _threshold;
+    private float _slider2Value;
     int _step;
 
     Texture2D _texture;
@@ -41,7 +42,8 @@ public class quadScript : MonoBehaviour
         _slider2 = uiDocument.rootVisualElement.Q("slider2") as Slider;
         _button.RegisterCallback<ClickEvent>(button1Pushed);
         _slider1.RegisterValueChangedCallback(slicePosSliderChange);
-        
+        _slider2.RegisterValueChangedCallback(sliceIsoSliderChange);
+
 
         Slice.initDicom();
 
@@ -51,8 +53,8 @@ public class quadScript : MonoBehaviour
                 Application.dataPath +
                 @"\..\dicomdata\"; // Application.dataPath is in the assets folder, but these files are "managed", so we go one level up
 
-        _step = 2;
-        _radius = 300;
+        _step = 10;
+        _radius = 90000; // så høy siden det er 3D, tror jeg....
         _threshold = 0.5f;
         _slices = processSlices(dicomfilepath); // loads slices from the folder above
         setTexture(_slices[0]); // shows the first slice
@@ -60,7 +62,7 @@ public class quadScript : MonoBehaviour
 
         /***
 
-        //  gets the mesh object and uses it to create a diagonal line
+        //gets the mesh object and uses it to create a diagonal line
         meshScript mscript = GameObject.Find("GameObjectMesh").GetComponent<meshScript>();
         List<Vector3> vertices = new List<Vector3>();
         List<int> indices = new List<int>();
@@ -72,8 +74,7 @@ public class quadScript : MonoBehaviour
         indices.Add(1);
         indices.Add(2);
         mscript.createMeshGeometry(vertices, indices);
-
-        */
+**/
     }
 
 
@@ -121,18 +122,21 @@ public class quadScript : MonoBehaviour
         var texture =
             new Texture2D(xdim, ydim, TextureFormat.RGB24, false); // garbage collector will tackle that it is new'ed 
 
-        ushort[] pixels = slice.getPixels();
-
 
         for (int y = 0; y < ydim; y++)
         {
             for (int x = 0; x < xdim; x++)
             {
-                float distance = Mathf.Sqrt(Mathf.Pow((x - (xdim / 2)), 2) + Mathf.Pow((y - (ydim / 2)), 2));
+                //float distance = Mathf.Sqrt(Mathf.Pow((x - (xdim / 2)), 2) + Mathf.Pow((y - (ydim / 2)), 2));
 
-                float t = Mathf.Clamp01(distance / _radius);
+                //float t = Mathf.Clamp01(distance / _radius);
 
+                float distance = (float)(Math.Pow(x - 256, 2) + Math.Pow(y - 256, 2) + Math.Pow(_slider2Value, 2));
+
+
+                float t = Mathf.Clamp01(distance / _radius); 
                 texture.SetPixel(x, y, new UnityEngine.Color(t, t, t));
+                
             }
         }
 
@@ -149,22 +153,10 @@ public class quadScript : MonoBehaviour
 
     void MarchingSquares()
     {
-        // Hopp med 10 for eksempel
-        // Mål de fire verdiene mot hverandre i en binær streng.
-        // Lag cases for alle mulige linjer
-        // Legg til i indice og vertice array
-        // Kall på tegneprogram
-
-
-        //  gets the mesh object and uses it to create a diagonal line
+        //Oppretter tegnefunskjon, og lister for vertices og indices
         meshScript mscript = GameObject.Find("GameObjectMesh").GetComponent<meshScript>();
         List<Vector3> vertices = new List<Vector3>();
         List<int> indices = new List<int>();
-
-
-
-        Debug.Log(_texture.height);
-
 
         for (int y = 0; y < _texture.height; y = y + _step)
         {
@@ -188,10 +180,10 @@ public class quadScript : MonoBehaviour
                 Vector3 p3 = OversettKoordinat(x + _step, y + _step);
                 Vector3 p4 = OversettKoordinat(x, y + _step);
 
-                Vector3 midTop = (p1 + p2) / 2;
-                Vector3 midRight = (p2 + p3) / 2;
-                Vector3 midBottom = (p3 + p4) / 2;
-                Vector3 midLeft = (p4 + p1) / 2;
+                Vector3 midTop = Interpolate(p1, p2, topLeft, topRight);
+                Vector3 midRight = Interpolate(p2, p3, topRight, bottomRight);
+                Vector3 midBottom = Interpolate(p3, p4, bottomRight, bottomLeft);
+                Vector3 midLeft = Interpolate(p4, p1, bottomLeft, topLeft);
 
 
                 switch (caseValue)
@@ -220,25 +212,18 @@ public class quadScript : MonoBehaviour
             }
         }
 
-        DrawLine(vertices, indices, mscript);
-    }
-
-    void DrawLine(List<Vector3> vertices, List<int> indices, meshScript mscript)
-    {
-        
-        List<Vector3> vert = new List<Vector3>();
-        List<int> ind = new List<int>();
-        vert.Add(new Vector3(-0.5f, -0.5f, 0));
-        vert.Add(new Vector3(0.5f, 0.5f, 0));
-        vert.Add(new Vector3(1.0f, 1.0f, 0));
-        ind.Add(0);
-        ind.Add(1);
-        ind.Add(1);
-        ind.Add(2);
-        //mscript.createMeshGeometry(vert, ind);
-        
         mscript.createMeshGeometry(vertices, indices);
     }
+
+
+    Vector3 Interpolate(Vector3 p1, Vector3 p2, float v1, float v2)
+    {
+        if (Mathf.Abs(v1 - v2) < 0.0001f)
+            return (p1 + p2) / 2;
+        float t = (_threshold - v1) / (v2 - v1);
+        return p1 + t * (p2 - p1);
+    }
+
 
     void AddLine(List<Vector3> vertices, List<int> indices, Vector3 p1, Vector3 p2)
     {
@@ -246,7 +231,7 @@ public class quadScript : MonoBehaviour
         {
             vertices.Add(p1);
             vertices.Add(p2);
-            
+
             indices.Add(0);
             indices.Add(1);
         }
@@ -254,13 +239,13 @@ public class quadScript : MonoBehaviour
         {
             vertices.Add(p1);
             vertices.Add(p2);
-            //indices.Add(vertices.Count - 3);
-            //indices.Add(vertices.Count - 2);   
+
             indices.Add(vertices.Count - 2);
             indices.Add(vertices.Count - 1);
         }
     }
 
+    //Oversetter koordinater fra teksturkoordinatsystem, til linjetegne system
     Vector3 OversettKoordinat(int x, int y)
     {
         float linjeX = (float)((x / (float)_texture.height) - 0.5);
@@ -289,16 +274,16 @@ public class quadScript : MonoBehaviour
     public void slicePosSliderChange(ChangeEvent<float> evt)
     {
         print("slicePosSliderChange:" + evt.newValue);
-        
+
         _threshold = evt.newValue / 100;
         setTexture(_slices[0]);
     }
 
-    public void sliceIsoSliderChange(float val)
+    public void sliceIsoSliderChange(ChangeEvent<float> val)
     {
         print("sliceIsoSliderChange:" + val);
 
-        _threshold = val;
+        _slider2Value = val.newValue;
         setTexture(_slices[0]);
     }
 

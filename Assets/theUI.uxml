@@ -3,6 +3,6 @@
         <ui:Button text="This is a Button" display-tooltip-when-elided="true" name="button1" data-source="project://database/Assets/UI%20Toolkit/UnityThemes/UnityDefaultRuntimeTheme.tss?fileID=4413694071827464959&amp;guid=3dda5d08aec430c438934fbbaecd3d39&amp;type=3#default" style="position: absolute; top: 29px; left: 10px;" />
         <ui:Toggle label="A toggle" name="toggle1" style="position: absolute; top: 195px; left: 11px;" />
         <ui:Slider label="Slider1" value="42" high-value="100" name="slider1" style="position: absolute; top: 117px; left: 5px; width: 286px; flex-direction: row; align-items: center; justify-content: space-between;" />
-        <ui:Slider label="Slider2" value="42" high-value="100" name="slider2" style="position: absolute; top: 159px; left: 6px; width: 286px; flex-direction: row; align-items: center; justify-content: space-between;" />
+        <ui:Slider label="Slider2" value="42" high-value="256" name="slider2" low-value="-256" style="position: absolute; top: 159px; left: 6px; width: 286px; flex-direction: row; align-items: center; justify-content: space-between;" />
     </ui:VisualElement>
 </ui:UXML>
