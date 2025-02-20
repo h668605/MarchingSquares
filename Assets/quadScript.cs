@@ -115,10 +115,6 @@ public class quadScript : MonoBehaviour
     {
         int xdim = slice.sliceInfo.Rows;
         int ydim = slice.sliceInfo.Columns;
-
-        int[][] gridArray = new int[xdim][];
-
-
         var texture =
             new Texture2D(xdim, ydim, TextureFormat.RGB24, false); // garbage collector will tackle that it is new'ed 
 
@@ -128,12 +124,9 @@ public class quadScript : MonoBehaviour
             for (int x = 0; x < xdim; x++)
             {
                 //float distance = Mathf.Sqrt(Mathf.Pow((x - (xdim / 2)), 2) + Mathf.Pow((y - (ydim / 2)), 2));
-
                 //float t = Mathf.Clamp01(distance / _radius);
 
                 float distance = (float)(Math.Pow(x - 256, 2) + Math.Pow(y - 256, 2) + Math.Pow(_slider2Value, 2));
-
-
                 float t = Mathf.Clamp01(distance / _radius); 
                 texture.SetPixel(x, y, new UnityEngine.Color(t, t, t));
                 
